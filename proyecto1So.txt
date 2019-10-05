@@ -1,0 +1,93 @@
+// p1-dogProgram.c
+
+tamaño >= 1000; // (= 1009 por ejemplo) /!\ numero primo! (importante pero no necesario) 
+funcion hash(void key, int f_key(void key, unsigned int tamaño)) // f_key es una funcion
+/*
+f_key(key) -> #
+key_1 != key_2
+f_key(key_1) == f_key(key_2)
+key nombre tipo edad raza ...
+if (key_1 == key)
+else: #+1
+*/
+
+typedef struct dogType_s
+	Nombre. Cadena de máximo 32 caracteres.
+	Tipo. [perro, gato, tortuga, etc] Cadena de máximo 32 caracteres.
+	Edad [años]. Entero de 32 bits.
+	Raza. Cadena de máximo 16 caracteres.
+	Estatura [cm]. Entero de 32 bits.
+	Peso [Kg]. Real de 32 bits.
+	Sexo [H/M]. 1 caracter.
+dogType;
+
+typedef struct tabla_s
+	void * tabla_id[tamaño];
+	char * tabla_nombres[tamaño];
+tabla;
+
+print menú
+	1. Ingresar registro
+	2. Ver registro
+	3. Borrar registro
+	4. Buscar
+	5. Salir
+
+el usuario escribe un numeró. Si el numeró esta entre 1 y 5, ejecutar la funcion
+
+Salir :
+	free
+	exit
+
+Ingresar :
+	malloc
+	scanf
+	fopen dataDogs.dat
+	fwrite
+	fclose
+	free
+	tabla_nombres +
+	printf("cualquier tecla"); while(getc(stdin) != '\0');
+
+Borrar :
+	f_key(key)
+	if(id = f_key(key).id)
+	sino : f_key(key)+1
+	fopen
+	copiar todo sin linea; - https://www.sanfoundry.com/c-program-delete-line-text-file/	
+	fclose
+	remove;
+	rename;
+	tamaño--;
+	tabla_nombres -
+	printf("cualquier tecla"); while(getc(stdin) != '\0');
+	
+Ver :
+	f_key(key)
+	if(id = f_key(key).id)
+	sino : f_key(key)+1
+	malloc
+	fopen
+	do
+		fread
+		printf
+	loop
+	fclose
+	free
+	printf("cualquier tecla"); while(getc(stdin) != '\0');
+
+Buscar :
+	for d en tabla_dogs:
+		si d es de manera "string*" (si d[len(string)] == string)
+			printf
+	printf("cualquier tecla"); while(getc(stdin) != '\0');
+
+Main :
+	fopen
+		-> si no existe, crear el archivo
+	for cada structura en el archivo:
+		tabla.tabla_id = id;
+		tabla.tabla_nombres = nombre;
+	fclose
+	menu
+
