@@ -4,21 +4,28 @@
 
 #include "p1-dogProgram.h"
 
+tabla hash_table;
+
 int main(int argc, char* argv[]){
+	hash_table.id = (ulong*) malloc(11 * sizeof(ulong));
+	hash_table.nombres = (char**) malloc(11 * sizeof(char*));
+	hash_table.size = 11;
+	hash_table.numero_de_datos = 0;
+	hash_table.last_key = 0;
+	
 	menu();
 	return EXIT_SUCCESS;
 }
 
 void menu(){
 	char p;
-	int r = 0;
 	while (1) {
 		p = 0;
 		printf("1. Ingresar registro\n2. Ver registro\n3. Borrar registro\n4. Buscar\n5. Salir\n");
 		while(p < '1' || p > '5'){
 			p = getchar();
 		}
-		switch(p){
+		switch(p){ // check si p es 1, 2, 3, 4 o 5
 		case '1':
 			ingresar();
 			break;
@@ -43,7 +50,108 @@ void menu(){
 }
 
 void ingresar(){
-	printf("ingresar\n");
+	int r;
+	dogType* new = (dogType*) malloc(sizeof(dogType));
+	printf("Cual es el nombre de la mascota?\n");
+	r = scanf("%s", new->nombre);
+	if (r == 0){
+		perror("scanf");
+		free(new);
+		exit(EXIT_FAILURE);
+	}
+	printf("Cual es su tipo?\n");
+	r = scanf("%s", new->tipo);
+	if (r == 0){
+		perror("scanf");
+		free(new);
+		exit(EXIT_FAILURE);
+	}
+	printf("Cual es su edad?\n");
+	r = scanf("%lu", &new->edad);
+	if (r == 0){
+		perror("scanf");
+		free(new);
+		exit(EXIT_FAILURE);
+	}
+	printf("Cual es su raza?\n");
+	r = scanf("%s", new->raza);
+	if (r == 0){
+		perror("scanf");
+		free(new);
+		exit(EXIT_FAILURE);
+	}
+	printf("Cual es su estatura (en cm)?\n");
+	r = scanf("%lu", &new->estatura);
+	if (r == 0){
+		perror("scanf");
+		free(new);
+		exit(EXIT_FAILURE);
+	}
+	printf("Cual es su peso (en Kg)?\n");
+	r = scanf("%lf", &new->peso);
+	if (r == 0){
+		perror("scanf");
+		free(new);
+		exit(EXIT_FAILURE);
+	}
+	printf("Cual es su sexo?\n");
+	getchar();
+	r = scanf("%c", &new->sexo);
+	if (r == 0){
+		perror("scanf");
+		free(new);
+		exit(EXIT_FAILURE);
+	}
+
+	// printf("\nMascota :\n%s %s %lu %s %lu %lf %c\n", new->nombre, new->tipo, new->edad, new->raza, new->estatura, new->peso, new->sexo);
+
+	ulong key = new_hash();
+	ulong id = hash(key);
+	if(hash_table.id[id] == key){
+		printf("Key : %lu\n", key);
+	} else {
+		fprintf(stderr, "Error in new_hash\n");
+		free(new);
+		exit(EXIT_FAILURE);
+	}
+	
+	/*
+	  Escribir en un archivo
+	 */
+	FILE *archivo = fopen(ARCHIVO, "w+");
+	if (archivo == 0){
+		perror("fopen");
+		free(new);
+		exit(EXIT_FAILURE);
+	}
+	ir_en_linea(archivo, id);
+	r = fwrite(&key, sizeof(ulong), 1, archivo);
+	if (r == 0){
+		perror("fwrite");
+		free(new);
+		fclose(archivo);
+		exit(EXIT_FAILURE);
+	}
+	char c = ' ';
+	fwrite(&c, sizeof(char), 1, archivo);
+	fwrite(new->nombre, sizeof(new->nombre), 1, archivo);
+	fwrite(&c, sizeof(char), 1, archivo);
+	fwrite(new->tipo, sizeof(new->tipo), 1, archivo);
+	fwrite(&c, sizeof(char), 1, archivo);
+	fwrite(&new->edad, sizeof(ulong), 1, archivo);
+	fwrite(&c, sizeof(char), 1, archivo);
+	fwrite(new->raza, sizeof(new->raza), 1, archivo);
+	fwrite(&c, sizeof(char), 1, archivo);
+	fwrite(&new->estatura, sizeof(ulong), 1, archivo);
+	fwrite(&c, sizeof(char), 1, archivo);
+	fwrite(&new->peso, sizeof(double), 1, archivo);
+	fwrite(&c, sizeof(char), 1, archivo);
+	fwrite(&new->sexo, sizeof(char), 1, archivo);
+	c = '\n';
+	fwrite(&c, sizeof(char), 1, archivo);
+	fclose(archivo);
+	
+	free(new);
 }
 
 void ver(){
@@ -60,4 +168,47 @@ void buscar(){
 
 void salir(){
 	exit(EXIT_SUCCESS);
+}
+
+
+// returns id ; hash_table[id] == key dice si existe
+ulong hash(ulong key){
+	ulong id = key % hash_table.size, id1 = id;
+	while (hash_table.id[id] != key && hash_table.id[id] != 0){
+		id++;
+		if (id == id1){ // no hay el id en la tabla
+			return id;
+		}
+	}
+	// id[id] == key
+	return id;
+}
+
+ulong new_hash(){
+	if(hash_table.size == hash_table.numero_de_datos){
+		hash_table.size++; // hacer con numeros primos
+	}
+	hash_table.numero_de_datos++;
+	hash_table.last_key++;
+	ulong key = hash_table.last_key;
+	ulong id = hash(key);
+	hash_table.id[id] = key; 
+	return key;
+}
+
+void ir_en_linea(FILE* archivo, ulong linea){
+	ulong i = 0;
+	char c;
+	while (i < linea){
+		c = fgetc(archivo);
+		getchar();
+		if(c == '\n'){ // nueva linea
+			i++;
+		}
+		if(c == '\0' || c == -1){ // fin del archivo
+			char p = '\n';
+			fwrite(&p, sizeof(char), 1, archivo);
+			i++;
+		}
+	}
 }

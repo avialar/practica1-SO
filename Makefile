@@ -9,6 +9,6 @@ p1-dogProgram.o: p1-dogProgram.c p1-dogProgram.h
 	$(CC) -c $< -Wall
 
 clean:
-	rm p1-dogProgram *.o
+	rm p1-dogProgram *.o dataDogs.dat
 
 .PHONY : clean p1-dogProgram

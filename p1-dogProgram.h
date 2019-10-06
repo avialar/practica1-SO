@@ -1,5 +1,6 @@
 typedef unsigned int uint;
 typedef unsigned long ulong; // 32 bits 
+#define ARCHIVO "dataDogs.dat"
 
 typedef struct dogType_s{
 	char nombre[32];
@@ -12,8 +13,11 @@ typedef struct dogType_s{
 } dogType;
 
 typedef struct tabla_s{
-	ulong id;
+	ulong* id;
 	char** nombres;
+	ulong size;
+	ulong numero_de_datos;
+	ulong last_key;
 } tabla;
 
 void menu();
@@ -22,4 +26,6 @@ void ver();
 void borrar();
 void buscar();
 void salir();
-ulong hash(); // In : key, f_key ; Out : id
+ulong hash(ulong key); // In : key ; Out : id
+ulong new_hash(); // Out : key
+void ir_en_linea(FILE* archivo, ulong linea);
