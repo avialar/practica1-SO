@@ -45,7 +45,7 @@ void menu(){
 			perror("getchar");
 			exit(EXIT_FAILURE);
 		}
-		printf("cualquier tecla\n"); getchar();
+		printf("cualquier tecla\n"); getchar(); getchar();
 	}
 }
 
@@ -118,7 +118,7 @@ void ingresar(){
 	/*
 	  Escribir en un archivo
 	 */
-	FILE *archivo = fopen(ARCHIVO, "w+");
+	FILE *archivo = fopen(ARCHIVO, "r+");
 	if (archivo == 0){
 		perror("fopen");
 		free(new);
@@ -174,8 +174,8 @@ void salir(){
 // returns id ; hash_table[id] == key dice si existe
 ulong hash(ulong key){
 	ulong id = key % hash_table.size, id1 = id;
-	while (hash_table.id[id] != key && hash_table.id[id] != 0){
-		id++;
+	while (hash_table.id[id] != key){
+		id = (id+1) % hash_table.size;
 		if (id == id1){ // no hay el id en la tabla
 			return id;
 		}
@@ -191,23 +191,28 @@ ulong new_hash(){
 	hash_table.numero_de_datos++;
 	hash_table.last_key++;
 	ulong key = hash_table.last_key;
-	ulong id = hash(key);
+	ulong id = key % hash_table.size;
+	while (hash_table.id[id] != 0){
+		id = (id+1) % hash_table.size;
+	}
+	
 	hash_table.id[id] = key; 
 	return key;
 }
 
 void ir_en_linea(FILE* archivo, ulong linea){
 	ulong i = 0;
-	char c;
+	char* s;
+	char buffer[SIZE];
 	while (i < linea){
-		c = fgetc(archivo);
-		getchar();
-		if(c == '\n'){ // nueva linea
-			i++;
-		}
-		if(c == '\0' || c == -1){ // fin del archivo
+		s = fgets(buffer, SIZE, archivo);
+		if(s == NULL){
 			char p = '\n';
 			fwrite(&p, sizeof(char), 1, archivo);
+			i++;
+		} else { 
+			//fwrite(buffer, sizeof(buffer), 1, archivo);
+			printf("linea %ld\n", i);
 			i++;
 		}
 	}
