@@ -1,8 +1,0 @@
-CC=gcc
-
-p1-dogProgram: p1--dogProgram.o
-	$(CC) -o $0 $@
-
-p1-dogProgram.o: p1-dogProgram.c p1-dogProgram.h
-	$(CC) -c $@ -Wall
-
