@@ -7,11 +7,47 @@
 tabla hash_table;
 
 int main(int argc, char* argv[]){
+	//char *s, buffer[SIZE];
+	//char *endptr;
+	//FILE *archivo;
+	
 	hash_table.id = (ulong*) malloc(11 * sizeof(ulong));
 	hash_table.nombres = (char**) malloc(11 * sizeof(char*));
 	hash_table.size = 11;
 	hash_table.numero_de_datos = 0;
 	hash_table.last_key = 0;
+
+	/* no funciona
+	
+	archivo = fopen(ARCHIVO, "r");
+	if(archivo == 0){ // file doesn't exist
+		printf("el archivo ya no existe\n");
+		archivo = fopen(ARCHIVO, "w");
+		fclose(archivo);
+	} else { // file exists
+		for(uint i = 0; s != 0; s = fgets(buffer, sizeof(ulong), archivo), i++){ // reading the file
+			if(i > hash_table.size){
+				hash_table.size++; // hacer esto pero con un numero primo
+			}
+			
+			hash_table.id[i] = (ulong) strtol(s, &endptr, 10);
+			//error
+			printf("key : %ld\n", hash_table.id[i]);
+			if(hash_table.id[i] != 0){ // hay un dato
+				s = fgets(buffer, 32*sizeof(char), archivo); // nombre de la mascota
+				hash_table.nombres[i] = (char*) malloc(32 * sizeof(char));
+				for(uint j = 0; j < 32; j++){ // copy string
+					hash_table.nombres[i][j] = buffer[j];
+				}
+				printf("nombre : %s\n", s);
+			}
+			s = fgets(buffer, SIZE, archivo); // nueva linea
+		}
+		
+		fclose(archivo);
+	}
+
+	*/
 	
 	menu();
 	return EXIT_SUCCESS;
@@ -132,22 +168,14 @@ void ingresar(){
 		fclose(archivo);
 		exit(EXIT_FAILURE);
 	}
-	char c = ' ';
-	fwrite(&c, sizeof(char), 1, archivo);
-	fwrite(new->nombre, sizeof(new->nombre), 1, archivo);
-	fwrite(&c, sizeof(char), 1, archivo);
-	fwrite(new->tipo, sizeof(new->tipo), 1, archivo);
-	fwrite(&c, sizeof(char), 1, archivo);
+	fwrite(new->nombre, 32 * sizeof(char), 1, archivo);
+	fwrite(new->tipo, 32 * sizeof(char), 1, archivo);
 	fwrite(&new->edad, sizeof(ulong), 1, archivo);
-	fwrite(&c, sizeof(char), 1, archivo);
-	fwrite(new->raza, sizeof(new->raza), 1, archivo);
-	fwrite(&c, sizeof(char), 1, archivo);
+	fwrite(new->raza, 16 * sizeof(char), 1, archivo);
 	fwrite(&new->estatura, sizeof(ulong), 1, archivo);
-	fwrite(&c, sizeof(char), 1, archivo);
 	fwrite(&new->peso, sizeof(double), 1, archivo);
-	fwrite(&c, sizeof(char), 1, archivo);
 	fwrite(&new->sexo, sizeof(char), 1, archivo);
-	c = '\n';
+	char c = '\n';
 	fwrite(&c, sizeof(char), 1, archivo);
 	fclose(archivo);
 	
@@ -211,8 +239,6 @@ void ir_en_linea(FILE* archivo, ulong linea){
 			fwrite(&p, sizeof(char), 1, archivo);
 			i++;
 		} else { 
-			//fwrite(buffer, sizeof(buffer), 1, archivo);
-			printf("linea %ld\n", i);
 			i++;
 		}
 	}
