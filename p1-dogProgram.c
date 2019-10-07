@@ -6,49 +6,57 @@
 
 tabla hash_table;
 
+void test_hash(){
+	printf("Hash table :\nsize : %ld\nnumero de datos : %ld\nlast key : %ld\n", hash_table.size, hash_table.numero_de_datos, hash_table.last_key);
+	for (ulong i = 0; i < hash_table.size; i++){
+		printf("id[%ld] : key = %ld, nombre = \"%s\"\n", i, hash_table.id[i], hash_table.nombres[i]);
+	}
+}
+
 int main(int argc, char* argv[]){
-	//char *s, buffer[SIZE];
-	//char *endptr;
-	//FILE *archivo;
+	char buffer[SIZE_LINEA];
+	ulong key = 0, s = 1, zero=0;
+	FILE *archivo;
 	
-	hash_table.id = (ulong*) malloc(11 * sizeof(ulong));
-	hash_table.nombres = (char**) malloc(11 * sizeof(char*));
+	hash_table.id = (ulong*) calloc(11, sizeof(ulong));
+	hash_table.nombres = (char**) calloc(11, sizeof(char*));
 	hash_table.size = 11;
 	hash_table.numero_de_datos = 0;
 	hash_table.last_key = 0;
-
-	/* no funciona
 	
 	archivo = fopen(ARCHIVO, "r");
 	if(archivo == 0){ // file doesn't exist
 		printf("el archivo ya no existe\n");
 		archivo = fopen(ARCHIVO, "w");
+		fwrite(&zero, sizeof(ulong), 1, archivo);
 		fclose(archivo);
 	} else { // file exists
-		for(uint i = 0; s != 0; s = fgets(buffer, sizeof(ulong), archivo), i++){ // reading the file
+		for(uint i = 0; s != 0; s = fread(&key, sizeof(ulong), 1, archivo), i++){ // reading the file
 			if(i > hash_table.size){
 				hash_table.size++; // hacer esto pero con un numero primo
 			}
+						
+			hash_table.id[i] = key;
 			
-			hash_table.id[i] = (ulong) strtol(s, &endptr, 10);
-			//error
-			printf("key : %ld\n", hash_table.id[i]);
 			if(hash_table.id[i] != 0){ // hay un dato
-				s = fgets(buffer, 32*sizeof(char), archivo); // nombre de la mascota
+				hash_table.numero_de_datos++;
+				if (key > hash_table.last_key){
+					hash_table.last_key = key;
+				}
+				s = fread(buffer, sizeof(char), 32, archivo); // nombre de la mascota
 				hash_table.nombres[i] = (char*) malloc(32 * sizeof(char));
-				for(uint j = 0; j < 32; j++){ // copy string
+				for(uint j = 0; j < SIZE_GRANDE; j++){ // copy string
 					hash_table.nombres[i][j] = buffer[j];
 				}
-				printf("nombre : %s\n", s);
+				printf("nombre : %s\n", buffer);
 			}
-			s = fgets(buffer, SIZE, archivo); // nueva linea
+			fgets(buffer, SIZE_LINEA, archivo); // nueva linea
 		}
 		
 		fclose(archivo);
 	}
 
-	*/
-	
+	test_hash();
 	menu();
 	return EXIT_SUCCESS;
 }
@@ -88,6 +96,9 @@ void menu(){
 void ingresar(){
 	int r;
 	dogType* new = (dogType*) malloc(sizeof(dogType));
+	ulong key, id;
+	FILE *archivo;
+	char c;
 	printf("Cual es el nombre de la mascota?\n");
 	r = scanf("%s", new->nombre);
 	if (r == 0){
@@ -139,10 +150,8 @@ void ingresar(){
 		exit(EXIT_FAILURE);
 	}
 
-	// printf("\nMascota :\n%s %s %lu %s %lu %lf %c\n", new->nombre, new->tipo, new->edad, new->raza, new->estatura, new->peso, new->sexo);
-
-	ulong key = new_hash();
-	ulong id = hash(key);
+	key = new_hash(new->nombre);
+	id = hash(key);
 	if(hash_table.id[id] == key){
 		printf("Key : %lu\n", key);
 	} else {
@@ -154,7 +163,7 @@ void ingresar(){
 	/*
 	  Escribir en un archivo
 	 */
-	FILE *archivo = fopen(ARCHIVO, "r+");
+	archivo = fopen(ARCHIVO, "r+");
 	if (archivo == 0){
 		perror("fopen");
 		free(new);
@@ -168,30 +177,74 @@ void ingresar(){
 		fclose(archivo);
 		exit(EXIT_FAILURE);
 	}
-	fwrite(new->nombre, 32 * sizeof(char), 1, archivo);
-	fwrite(new->tipo, 32 * sizeof(char), 1, archivo);
-	fwrite(&new->edad, sizeof(ulong), 1, archivo);
-	fwrite(new->raza, 16 * sizeof(char), 1, archivo);
-	fwrite(&new->estatura, sizeof(ulong), 1, archivo);
-	fwrite(&new->peso, sizeof(double), 1, archivo);
-	fwrite(&new->sexo, sizeof(char), 1, archivo);
-	char c = '\n';
+	fwrite(new, sizeof(dogType), 1, archivo);
+	/*
+	c = '\n';
 	fwrite(&c, sizeof(char), 1, archivo);
+	*/
 	fclose(archivo);
 	
 	free(new);
 }
 
 void ver(){
-	printf("ver\n");
+	int r;
+	ulong key, id;
+	dogType *mascota;
+	FILE *archivo;
+	printf("Hay %ld numeros presentes.\nCual es la clave de la mascota?\n", hash_table.numero_de_datos);
+	r = scanf("%ld", &key);
+	//error
+	id = hash(key);
+	if(hash_table.id[id] == 0){
+		return;
+	}
+	mascota = (dogType*) malloc(sizeof(dogType));
+	archivo = fopen(ARCHIVO, "r");
+	ir_en_linea(archivo, id);
+	r = fread(&key, sizeof(ulong), 1, archivo);
+	r = fread(mascota, sizeof(dogType), 1, archivo);
+	//error
+	fclose(archivo);
+	printf("Nombre : %s\nTipo : %s\nEdad : %ld\nRaza : %s\nEstatura : %ld\nPeso : %lf\nSexo : %c\n", mascota->nombre, mascota->tipo, mascota->edad, mascota->raza, mascota->estatura, mascota->peso, mascota->sexo);
+	free(mascota);
 }
 
 void borrar(){
-	printf("borrar\n");
+	int r;
+	ulong key, id;
+	FILE *archivo;
+	printf("Hay %ld numeros presentes.\nCual es la clave de la mascota?\n", hash_table.numero_de_datos);
+	r = scanf("%ld", &key);
+	//error
+	id = hash(key);
+	if(hash_table.id[id] == 0){
+		return;
+	}
+	archivo = fopen(ARCHIVO, "r+");
+	ir_en_linea(archivo, id);
+	key = 0;
+	r = fwrite(&key, sizeof(ulong), 1, archivo);
+	//error
+	fclose(archivo);
 }
 
 void buscar(){
-	printf("buscar\n");
+	int r, s;
+	ulong i, j;
+	char buffer[SIZE_GRANDE];
+	printf("Cual es el nombre de la mascota?\n");
+	r = scanf("%s", buffer);
+	//error
+	for (i = 0; i < hash_table.size; i++){
+		if(hash_table.id[i] != 0){
+			for(j = 0; j < SIZE_GRANDE && buffer[j] != 0 && hash_table.nombres[i][j] != 0 && buffer[j] == hash_table.nombres[i][j]; j++){
+			}
+			if(buffer[j] == '\0'){
+				printf("key : %ld - nombre : %s\n", hash_table.id[i], hash_table.nombres[i]);
+			}
+		}
+	}
 }
 
 void salir(){
@@ -212,7 +265,7 @@ ulong hash(ulong key){
 	return id;
 }
 
-ulong new_hash(){
+ulong new_hash(char* nombre){
 	if(hash_table.size == hash_table.numero_de_datos){
 		hash_table.size++; // hacer con numeros primos
 	}
@@ -224,22 +277,32 @@ ulong new_hash(){
 		id = (id+1) % hash_table.size;
 	}
 	
-	hash_table.id[id] = key; 
+	hash_table.id[id] = key;
+	hash_table.nombres[id] = (char*) malloc(SIZE_GRANDE * sizeof(char));
+	for(uint j = 0; j < SIZE_GRANDE; j++){ // copy string
+		hash_table.nombres[id][j] = nombre[j];
+	}
 	return key;
 }
 
 void ir_en_linea(FILE* archivo, ulong linea){
 	ulong i = 0;
 	char* s;
-	char buffer[SIZE];
+	char buffer[SIZE_LINEA];
+	char p = '\n';
 	while (i < linea){
-		s = fgets(buffer, SIZE, archivo);
+		s = fgets(buffer, SIZE_LINEA * sizeof(char), archivo);
 		if(s == NULL){
-			char p = '\n';
 			fwrite(&p, sizeof(char), 1, archivo);
 			i++;
-		} else { 
+		} else {
 			i++;
+		}
+	}
+	if(linea > 0){
+		for(i = 0; buffer[i] != 0 && buffer[i] != '\n'; i++);
+		if(buffer[i] == 0){
+			fwrite(&p, sizeof(char), 1, archivo);
 		}
 	}
 }

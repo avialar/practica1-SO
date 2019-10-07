@@ -1,7 +1,9 @@
 typedef unsigned int uint;
 typedef unsigned long ulong; // 32 bits 
 #define ARCHIVO "dataDogs.dat"
-#define SIZE 1024
+#define SIZE_LINEA 1024
+#define SIZE_GRANDE 32
+#define SIZE_PEQUENO 16
 
 typedef struct dogType_s{
 	char nombre[32];
