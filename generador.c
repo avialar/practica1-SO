@@ -21,7 +21,10 @@ int main(){
 		n = rand() % NOMBRES;
 		ir_en_linea(nombre_a, n);
 		s = fgets(tmp.nombre, SIZE_GRANDE * sizeof(char), nombre_a);
-		//error
+		if (s == 0){
+			perror("fgets");
+			exit(EXIT_FAILURE);
+		}
 		for(j = 0; j < SIZE_GRANDE; j++){
 			if(tmp.nombre[j] == '\n'){
 				tmp.nombre[j] = 0;
@@ -31,11 +34,20 @@ int main(){
 			key = i;
 		}
 		r = fwrite(&key, sizeof(ulong), 1, datos_a);
-		//error
+ 		if(r == 0){
+			perror("fwrite");
+			exit(EXIT_FAILURE);
+		}
 		r = fwrite(&tmp, sizeof(dogType), 1, datos_a);
-		//error
+ 		if(r == 0){
+			perror("fwrite");
+			exit(EXIT_FAILURE);
+		}
 		r = fwrite(&nl, sizeof(char), 1, datos_a);
-		//error
+		if(r == 0){
+			perror("fwrite");
+			exit(EXIT_FAILURE);
+		}
 	}
 	
 	return EXIT_SUCCESS;

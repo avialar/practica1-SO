@@ -212,14 +212,19 @@ void ver(){
 	}
 	fclose(archivo);
 	printf("Nombre : %s\nTipo : %s\nEdad : %ld\nRaza : %s\nEstatura : %ld\nPeso : %lf\nSexo : %c\n", mascota->nombre, mascota->tipo, mascota->edad, mascota->raza, mascota->estatura, mascota->peso, mascota->sexo);
-	printf("Quiere abrir la historia clinica de %s? [S/N]\n", mascota->nombre);
-	r = scanf("%c", &l);
-	if (r == 0){
-		perror("scanf");
-		free(mascota);
-		exit(EXIT_FAILURE);
+
+	//existe la historia clinica?
+	char command2[18];
+	r = sprintf(command2, "%lu_hc.txt", key);
+	archivo = fopen(command2, "r");
+
+	if(archivo == NULL){ // tenemos que crearla
+		
 	}
-	while(l != 'S' && l != 's' && l != 'N' && l != 'n'){
+	fclose(archivo);
+	printf("Quiere abrir la historia clinica de %s? [S/N]\n", mascota->nombre);
+	l = 0;
+	while(l != 'S' && l != 's' && l != 'N' && l != 'n'){ // [S/N]
 		r = scanf("%c", &l);
 		if (r == 0){
 			perror("scanf");
@@ -234,16 +239,60 @@ void ver(){
 		}
 		if(pid == 0){
 			char command1[] = "/usr/bin/xdg-open";
-			char command2[18];
-			r = sprintf(command2, "%lu_hc.txt", key);
 			if (r < 0){
 				perror("sprintf");
 				free(mascota);
 				exit(EXIT_FAILURE);
 			}
-			char* argv[3], *envp[1] = {0};
+			char env1[32], env2[32];
+			
+			char
+				/*
+				 *caml    = getenv("CAML_LD_LIBRARY_PATH"),
+				 *dbus    = getenv("DBUS_SESSION_BUS_ADDRESS"),
+				 */
+				*display = getenv("DISPLAY"), // para Window Manager
+				/*
+				 *editor  = getenv("EDITOR"),
+				 *home    = getenv("HOME"),
+				 *invocid = getenv("INVOCATION_ID"),
+				 *journ   = getenv("JOURNAL_STREAM"),
+				 *lang    = getenv("LANG"),
+				 *less    = getenv("LESSOPEN"),
+				 *logn    = getenv("LOGNAME"),
+				 *mail    = getenv("MAIL"),
+				 *moz     = getenv("MOZ_PLUGIN_PATH"),
+				 *ocaml   = getenv("OCAML_TOPLEVEL_PATH"),
+				 *oldpwd  = getenv("OLDPWD"),
+				 *opam    = getenv("OPAM_SWITCH_PREFIX "),
+				 *path    = getenv("PATH"),
+				 *prompt  = getenv("PROMPT"),
+				 *pwd     = getenv("PWD"),
+				 *shell   = getenv("SHELL"),
+				 *shlvl   = getenv("SHLVL"),
+				 */
+				*term    = getenv("TERM"); // para consola
+			  /*
+			   *tmux0   = getenv("TMUX"),
+			   *tmux1   = getenv("TMUX_PANE"),
+			   *user    = getenv("USER"),
+			   *winid   = getenv("WINDOWID"),
+			   *xauth   = getenv("XAUTHORITY"),
+			   *xdg0    = getenv("XDG_RUNTIME_DIR"),
+			   *xdg1    = getenv("XDG_SEAT"),
+			   *xdg2    = getenv("XDG_SESSION_CLASS"),
+			   *xdg3    = getenv("XDG_SESSION_ID"),
+			   *xdg4    = getenv("XDG_SESSION_TYPE"),
+			   *xdg5    = getenv("XDG_VTNR"),
+			   *manp    = getenv("MANPATH");
+			   */
+			
+			sprintf(env1, "TERM=%s", term);
+			sprintf(env2, "DISPLAY=%s", display);
+			
+			char* argv[3], *envp[] = {env1, env2, 0};
 			argv[0] = command1; argv[1] = command2; argv[2] = 0;
-			execve(command1, argv, envp);
+			execve(command1, argv, envp); // xdg-open archivo.txt
 			exit(EXIT_SUCCESS);
 		}
 	}
@@ -266,6 +315,8 @@ void borrar(){
 	}
 	archivo = fopen(ARCHIVO, "r+");
 	ir_en_linea(archivo, id);
+	hash_table.id[id] = 0;
+	free(hash_table.nombres[id]);
 	key = 0;
 	r = fwrite(&key, sizeof(ulong), 1, archivo);
 	if (r == 0){
