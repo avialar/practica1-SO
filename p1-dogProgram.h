@@ -32,3 +32,4 @@ void salir();
 ulong hash(ulong key); // In : key ; Out : id
 ulong new_hash(); // Out : key
 void ir_en_linea(FILE* archivo, ulong linea);
+void sizemasmas();

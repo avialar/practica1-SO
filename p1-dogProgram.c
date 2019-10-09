@@ -1,17 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <strings.h>
+#include <unistd.h>
 
 #include "p1-dogProgram.h"
 
 tabla hash_table;
-
-void test_hash(){
-	printf("Hash table :\nsize : %ld\nnumero de datos : %ld\nlast key : %ld\n", hash_table.size, hash_table.numero_de_datos, hash_table.last_key);
-	for (ulong i = 0; i < hash_table.size; i++){
-		printf("id[%ld] : key = %ld, nombre = \"%s\"\n", i, hash_table.id[i], hash_table.nombres[i]);
-	}
-}
 
 int main(int argc, char* argv[]){
 	char buffer[SIZE_LINEA];
@@ -31,9 +25,10 @@ int main(int argc, char* argv[]){
 		fwrite(&zero, sizeof(ulong), 1, archivo);
 		fclose(archivo);
 	} else { // file exists
+		s = fread(&key, sizeof(ulong), 1, archivo);
 		for(uint i = 0; s != 0; s = fread(&key, sizeof(ulong), 1, archivo), i++){ // reading the file
 			if(i > hash_table.size){
-				hash_table.size++; // hacer esto pero con un numero primo
+				sizemasmas();
 			}
 						
 			hash_table.id[i] = key;
@@ -48,7 +43,6 @@ int main(int argc, char* argv[]){
 				for(uint j = 0; j < SIZE_GRANDE; j++){ // copy string
 					hash_table.nombres[i][j] = buffer[j];
 				}
-				printf("nombre : %s\n", buffer);
 			}
 			fgets(buffer, SIZE_LINEA, archivo); // nueva linea
 		}
@@ -56,7 +50,6 @@ int main(int argc, char* argv[]){
 		fclose(archivo);
 	}
 
-	test_hash();
 	menu();
 	return EXIT_SUCCESS;
 }
@@ -89,7 +82,7 @@ void menu(){
 			perror("getchar");
 			exit(EXIT_FAILURE);
 		}
-		printf("cualquier tecla\n"); getchar(); getchar();
+		printf("Presione Enter.\n"); getchar(); getchar(); 
 	}
 }
 
@@ -192,6 +185,9 @@ void ver(){
 	ulong key, id;
 	dogType *mascota;
 	FILE *archivo;
+	char l;
+	pid_t pid;
+		
 	printf("Hay %ld numeros presentes.\nCual es la clave de la mascota?\n", hash_table.numero_de_datos);
 	r = scanf("%ld", &key);
 	//error
@@ -203,10 +199,34 @@ void ver(){
 	archivo = fopen(ARCHIVO, "r");
 	ir_en_linea(archivo, id);
 	r = fread(&key, sizeof(ulong), 1, archivo);
+	//error
 	r = fread(mascota, sizeof(dogType), 1, archivo);
 	//error
 	fclose(archivo);
 	printf("Nombre : %s\nTipo : %s\nEdad : %ld\nRaza : %s\nEstatura : %ld\nPeso : %lf\nSexo : %c\n", mascota->nombre, mascota->tipo, mascota->edad, mascota->raza, mascota->estatura, mascota->peso, mascota->sexo);
+	printf("Quiere abrir la historia clinica de %s? [S/N]\n", mascota->nombre);
+	r = scanf("%c", &l);
+	//error
+	while(l != 'S' && l != 's' && l != 'N' && l != 'n'){
+		r = scanf("%c", &l);
+		//error
+	}
+	if(l == 'S' || l == 's'){ // abrir historia clinica
+		pid = fork();
+		if(pid == -1){
+			perror("can't fork");
+		}
+		if(pid != 0){
+			char command1[] = "/usr/bin/xdg-open";
+			char command2[18];
+			r = sprintf(command2, "%lu_hc.txt", key);
+			//error < 0
+			char* argv[3], *envp[1] = {0};
+			argv[0] = command1; argv[1] = command2; argv[2] = 0;
+			execve(command1, argv, envp);
+			exit(EXIT_SUCCESS);
+		}
+	}
 	free(mascota);
 }
 
@@ -267,7 +287,7 @@ ulong hash(ulong key){
 
 ulong new_hash(char* nombre){
 	if(hash_table.size == hash_table.numero_de_datos){
-		hash_table.size++; // hacer con numeros primos
+		sizemasmas(); // hacer con numeros primos
 	}
 	hash_table.numero_de_datos++;
 	hash_table.last_key++;
@@ -305,4 +325,31 @@ void ir_en_linea(FILE* archivo, ulong linea){
 			fwrite(&p, sizeof(char), 1, archivo);
 		}
 	}
+}
+
+
+/*
+hash = datos1
+tmp = datos1
+hash = datos2
+datos1 -> datos2
+free datos1
+ */
+void sizemasmas(){
+	uint i, j;
+	tabla tmp;
+	tmp.size = hash_table.size;
+	tmp.id = hash_table.id;
+	tmp.nombres = hash_table.nombres;
+	
+	hash_table.size += 100;
+	hash_table.id = (ulong*) calloc(hash_table.size, sizeof(ulong));
+	//error
+	hash_table.nombres = (char**) calloc(hash_table.size, sizeof(char*));
+	//error
+	for(i = 0; i < tmp.size; i++){
+		hash_table.id[i] = tmp.id[i];
+		hash_table.nombres[i] = tmp.nombres[i];
+	}
+	free(tmp.id); free(tmp.nombres);
 }
