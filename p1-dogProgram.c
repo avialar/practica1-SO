@@ -12,9 +12,9 @@ int main(int argc, char* argv[]){
 	ulong key = 0, s = 1, zero=0;
 	FILE *archivo;
 	
-	hash_table.id = (ulong*) calloc(11, sizeof(ulong));
-	hash_table.nombres = (char**) calloc(11, sizeof(char*));
-	hash_table.size = 11;
+	hash_table.id = (ulong*) calloc(10000000, sizeof(ulong));
+	hash_table.nombres = (char**) calloc(10000000, sizeof(char*));
+	hash_table.size = 10000000;
 	hash_table.numero_de_datos = 0;
 	hash_table.last_key = 0;
 	
@@ -91,7 +91,6 @@ void ingresar(){
 	dogType* new = (dogType*) malloc(sizeof(dogType));
 	ulong key, id;
 	FILE *archivo;
-	char c;
 	printf("Cual es el nombre de la mascota?\n");
 	r = scanf("%s", new->nombre);
 	if (r == 0){
@@ -171,10 +170,6 @@ void ingresar(){
 		exit(EXIT_FAILURE);
 	}
 	fwrite(new, sizeof(dogType), 1, archivo);
-	/*
-	c = '\n';
-	fwrite(&c, sizeof(char), 1, archivo);
-	*/
 	fclose(archivo);
 	
 	free(new);
@@ -190,7 +185,10 @@ void ver(){
 		
 	printf("Hay %ld numeros presentes.\nCual es la clave de la mascota?\n", hash_table.numero_de_datos);
 	r = scanf("%ld", &key);
-	//error
+	if (r == 0){
+		perror("scanf");
+		exit(EXIT_FAILURE);
+	}
 	id = hash(key);
 	if(hash_table.id[id] == 0){
 		return;
@@ -199,28 +197,50 @@ void ver(){
 	archivo = fopen(ARCHIVO, "r");
 	ir_en_linea(archivo, id);
 	r = fread(&key, sizeof(ulong), 1, archivo);
-	//error
+	if (r == 0){
+		perror("fread");
+		free(mascota);
+		fclose(archivo);
+		exit(EXIT_FAILURE);
+	}
 	r = fread(mascota, sizeof(dogType), 1, archivo);
-	//error
+	if (r == 0){
+		perror("fread");
+		free(mascota);
+		fclose(archivo);
+		exit(EXIT_FAILURE);
+	}
 	fclose(archivo);
 	printf("Nombre : %s\nTipo : %s\nEdad : %ld\nRaza : %s\nEstatura : %ld\nPeso : %lf\nSexo : %c\n", mascota->nombre, mascota->tipo, mascota->edad, mascota->raza, mascota->estatura, mascota->peso, mascota->sexo);
 	printf("Quiere abrir la historia clinica de %s? [S/N]\n", mascota->nombre);
 	r = scanf("%c", &l);
-	//error
+	if (r == 0){
+		perror("scanf");
+		free(mascota);
+		exit(EXIT_FAILURE);
+	}
 	while(l != 'S' && l != 's' && l != 'N' && l != 'n'){
 		r = scanf("%c", &l);
-		//error
+		if (r == 0){
+			perror("scanf");
+			free(mascota);
+			exit(EXIT_FAILURE);
+		}
 	}
 	if(l == 'S' || l == 's'){ // abrir historia clinica
 		pid = fork();
 		if(pid == -1){
 			perror("can't fork");
 		}
-		if(pid != 0){
+		if(pid == 0){
 			char command1[] = "/usr/bin/xdg-open";
 			char command2[18];
 			r = sprintf(command2, "%lu_hc.txt", key);
-			//error < 0
+			if (r < 0){
+				perror("sprintf");
+				free(mascota);
+				exit(EXIT_FAILURE);
+			}
 			char* argv[3], *envp[1] = {0};
 			argv[0] = command1; argv[1] = command2; argv[2] = 0;
 			execve(command1, argv, envp);
@@ -236,7 +256,10 @@ void borrar(){
 	FILE *archivo;
 	printf("Hay %ld numeros presentes.\nCual es la clave de la mascota?\n", hash_table.numero_de_datos);
 	r = scanf("%ld", &key);
-	//error
+	if (r == 0){
+		perror("scanf");
+		exit(EXIT_FAILURE);
+	}
 	id = hash(key);
 	if(hash_table.id[id] == 0){
 		return;
@@ -245,17 +268,24 @@ void borrar(){
 	ir_en_linea(archivo, id);
 	key = 0;
 	r = fwrite(&key, sizeof(ulong), 1, archivo);
-	//error
+	if (r == 0){
+		perror("fwrite");
+		fclose(archivo);
+		exit(EXIT_FAILURE);
+	}
 	fclose(archivo);
 }
 
 void buscar(){
-	int r, s;
+	int r;
 	ulong i, j;
 	char buffer[SIZE_GRANDE];
 	printf("Cual es el nombre de la mascota?\n");
 	r = scanf("%s", buffer);
-	//error
+	if (r == 0){
+		perror("scanf");
+		exit(EXIT_FAILURE);
+	}
 	for (i = 0; i < hash_table.size; i++){
 		if(hash_table.id[i] != 0){
 			for(j = 0; j < SIZE_GRANDE && buffer[j] != 0 && hash_table.nombres[i][j] != 0 && buffer[j] == hash_table.nombres[i][j]; j++){
@@ -281,7 +311,6 @@ ulong hash(ulong key){
 			return id;
 		}
 	}
-	// id[id] == key
 	return id;
 }
 
@@ -319,12 +348,6 @@ void ir_en_linea(FILE* archivo, ulong linea){
 			i++;
 		}
 	}
-	if(linea > 0){
-		for(i = 0; buffer[i] != 0 && buffer[i] != '\n'; i++);
-		if(buffer[i] == 0){
-			fwrite(&p, sizeof(char), 1, archivo);
-		}
-	}
 }
 
 
@@ -336,7 +359,7 @@ datos1 -> datos2
 free datos1
  */
 void sizemasmas(){
-	uint i, j;
+	uint i;
 	tabla tmp;
 	tmp.size = hash_table.size;
 	tmp.id = hash_table.id;

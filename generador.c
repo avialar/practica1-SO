@@ -3,7 +3,8 @@
 
 #include "p1-dogProgram.h"
 
-#define ESTRUCTURAS 11
+//#define ESTRUCTURAS 10000000
+#define ESTRUCTURAS 10000
 #define NOMBRES 1717
 
 int main(){
