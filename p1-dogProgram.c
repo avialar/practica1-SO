@@ -8,7 +8,7 @@
 tabla hash_table;
 
 int main(int argc, char* argv[]){
-	char buffer[SIZE_LINEA];
+	dogType buffer;
 	ulong key = 0, s = 1, zero=0;
 	FILE *archivo;
 	
@@ -30,7 +30,6 @@ int main(int argc, char* argv[]){
 			if(i > hash_table.size){
 				sizemasmas();
 			}
-						
 			hash_table.id[i] = key;
 			
 			if(hash_table.id[i] != 0){ // hay un dato
@@ -38,13 +37,14 @@ int main(int argc, char* argv[]){
 				if (key > hash_table.last_key){
 					hash_table.last_key = key;
 				}
-				s = fread(buffer, sizeof(char), 32, archivo); // nombre de la mascota
+				s = fread(&buffer, sizeof(dogType), 1, archivo); // nombre de la mascota
 				hash_table.nombres[i] = (char*) malloc(32 * sizeof(char));
 				for(uint j = 0; j < SIZE_GRANDE; j++){ // copy string
-					hash_table.nombres[i][j] = buffer[j];
+					hash_table.nombres[i][j] = buffer.nombre[j];
 				}
+			} else {
+				s = fread(&buffer, sizeof(dogType), 1, archivo);
 			}
-			fgets(buffer, SIZE_LINEA, archivo); // nueva linea
 		}
 		
 		fclose(archivo);
@@ -177,7 +177,7 @@ void ingresar(){
 
 void ver(){
 	int r;
-	ulong key, id;
+	ulong key, id, key2;
 	dogType *mascota;
 	FILE *archivo;
 	char l;
@@ -190,18 +190,23 @@ void ver(){
 		exit(EXIT_FAILURE);
 	}
 	id = hash(key);
+	printf("key == %ld, id == %ld\n", key, id);
 	if(hash_table.id[id] == 0){
 		return;
 	}
 	mascota = (dogType*) malloc(sizeof(dogType));
 	archivo = fopen(ARCHIVO, "r");
 	ir_en_linea(archivo, id);
-	r = fread(&key, sizeof(ulong), 1, archivo);
+	r = fread(&key2, sizeof(ulong), 1, archivo);
 	if (r == 0){
 		perror("fread");
 		free(mascota);
 		fclose(archivo);
 		exit(EXIT_FAILURE);
+	}
+	if(key != key2){
+		printf("/!\\ key (%ld) != key2 (%ld)\n", key, key2);
+		return;
 	}
 	r = fread(mascota, sizeof(dogType), 1, archivo);
 	if (r == 0){
@@ -359,7 +364,7 @@ ulong hash(ulong key){
 	while (hash_table.id[id] != key){
 		id = (id+1) % hash_table.size;
 		if (id == id1){ // no hay el id en la tabla
-			return id;
+			return 0;
 		}
 	}
 	return id;
@@ -387,17 +392,13 @@ ulong new_hash(char* nombre){
 
 void ir_en_linea(FILE* archivo, ulong linea){
 	ulong i = 0;
-	char* s;
-	char buffer[SIZE_LINEA];
-	char p = '\n';
+	int r;
+	ulong tmp;
+	dogType buffer;
 	while (i < linea){
-		s = fgets(buffer, SIZE_LINEA * sizeof(char), archivo);
-		if(s == NULL){
-			fwrite(&p, sizeof(char), 1, archivo);
-			i++;
-		} else {
-			i++;
-		}
+		r += fread(&tmp, sizeof(ulong), 1, archivo);
+		r = fread(&buffer, sizeof(dogType), 1, archivo);
+		i++;
 	}
 }
 
@@ -424,6 +425,9 @@ void sizemasmas(){
 	for(i = 0; i < tmp.size; i++){
 		hash_table.id[i] = tmp.id[i];
 		hash_table.nombres[i] = tmp.nombres[i];
+		printf("%s\n", hash_table.nombres[i]);
 	}
-	free(tmp.id); free(tmp.nombres);
+	free(tmp.id);
+	printf("free 1\n");
+	//free(tmp.nombres);
 }
