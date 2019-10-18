@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "p1-dogProgram.h"
 
 #define ESTRUCTURAS 10000000
-//#define ESTRUCTURAS 10000
 #define NOMBRES 1717
 
 int main(){
@@ -12,8 +12,11 @@ int main(){
 	ulong i, j, n, key = 10000000;
 	int r;
 	dogType tmp = {"", "", 0, "", 0, 0, 'm'};
-	char nl = '\n';
 	char *nombres[NOMBRES], buffer;
+	clockid_t c = CLOCK_MONOTONIC_RAW;
+	struct timespec t;
+	clock_gettime(c, &t); srand(t.tv_sec);
+
 	
 	for(i = 0; i < NOMBRES; i++){
 		nombres[i] = (char*) calloc(SIZE_GRANDE, sizeof(char));
@@ -39,7 +42,7 @@ int main(){
 	
 	for(i = 0; i < ESTRUCTURAS; i++, rewind(nombre_a)){
 		if(i % (ESTRUCTURAS / 10) == 0){
-			printf("%ld\%\n", (ulong) (i * 1.0 / ESTRUCTURAS * 100));
+			printf("%ld%%\n", (ulong) (i * 1.0 / ESTRUCTURAS * 100));
 		}
 		n = rand() % NOMBRES;
 		for(j = 0; nombres[n][j] != 0; j++){

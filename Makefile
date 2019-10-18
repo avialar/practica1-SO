@@ -15,6 +15,6 @@ generador.o: generador.c p1-dogProgram.h
 	$(CC) -c $< -Wall
 
 clean:
-	rm p1-dogProgram generador *.o dataDogs.dat
+	rm p1-dogProgram generador *.o dataDogs.dat historias_clinicas/*
 
 .PHONY : clean p1-dogProgram

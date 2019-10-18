@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <strings.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "p1-dogProgram.h"
 
@@ -26,9 +28,10 @@ int main(int argc, char* argv[]){
 		fclose(archivo);
 	} else { // file exists
 		s = fread(&key, sizeof(ulong), 1, archivo);
-		for(uint i = 0; s != 0; s = fread(&key, sizeof(ulong), 1, archivo), i++){ // reading the file
+		for(uint i = 0; s != 0; i++){ // reading the file
 			if(i > hash_table.size){
 				sizemasmas();
+				getchar();
 			}
 			hash_table.id[i] = key;
 			
@@ -45,6 +48,7 @@ int main(int argc, char* argv[]){
 			} else {
 				s = fread(&buffer, sizeof(dogType), 1, archivo);
 			}
+			s = fread(&key, sizeof(ulong), 1, archivo);
 		}
 		
 		fclose(archivo);
@@ -176,13 +180,25 @@ void ingresar(){
 }
 
 void ver(){
-	int r;
+	int r, buffersize, wstatus;
 	ulong key, id, key2;
 	dogType *mascota;
 	FILE *archivo;
 	char l;
 	pid_t pid;
-		
+	char command1[] = "/usr/bin/nedit", command2[46] = "";
+	char buffer[211] = ""; // 32 + 32 + 20 + 16 + (20 + 13 = 33) + 8 (malo/femenino) + (22 + 5*7 = 22 + 35 = 57)
+	/*
+	  Nombre : 10
+	  Tipo : 7
+	  Edad : 7
+	  Raza : 7
+	  Estatura : 12
+	  Peso : 7
+	  Sexo : 7
+	*/
+	
+	
 	printf("Hay %ld numeros presentes.\nCual es la clave de la mascota?\n", hash_table.numero_de_datos);
 	r = scanf("%ld", &key);
 	if (r == 0){
@@ -190,7 +206,6 @@ void ver(){
 		exit(EXIT_FAILURE);
 	}
 	id = hash(key);
-	printf("key == %ld, id == %ld\n", key, id);
 	if(hash_table.id[id] == 0){
 		return;
 	}
@@ -216,17 +231,43 @@ void ver(){
 		exit(EXIT_FAILURE);
 	}
 	fclose(archivo);
-	printf("Nombre : %s\nTipo : %s\nEdad : %ld\nRaza : %s\nEstatura : %ld\nPeso : %lf\nSexo : %c\n", mascota->nombre, mascota->tipo, mascota->edad, mascota->raza, mascota->estatura, mascota->peso, mascota->sexo);
+	printf("Nombre : %s\nTipo : %s\nEdad : %ld\nRaza : %s\nEstatura : %ld\nPeso : %.12lf\nSexo : %c\n", mascota->nombre, mascota->tipo, mascota->edad, mascota->raza, mascota->estatura, mascota->peso, mascota->sexo);
 
 	//existe la historia clinica?
-	char command2[18];
-	r = sprintf(command2, "%lu_hc.txt", key);
+	
+	r = sprintf(command2, "historias_clinicas/%lu_hc.txt", key); // 19 + 20 + 7
+	if (r < 0){
+		perror("sprintf");
+		free(mascota);
+		exit(EXIT_FAILURE);
+	}
+	
 	archivo = fopen(command2, "r");
 
 	if(archivo == NULL){ // tenemos que crearla
 		
+		archivo = fopen(command2, "w");
+		if(archivo == NULL){
+			perror("fopen");
+			exit(EXIT_FAILURE);
+		}
+		char malo[] = "malo", femenino[] = "femenino", otro[] = "otro", *sexo;
+		if(mascota->sexo == 'm'){
+			sexo = malo;
+		} else if(mascota->sexo == 'f'){
+			sexo = femenino;
+		} else{
+			sexo = otro;
+		}
+		buffersize = sprintf(buffer, "Nombre : %s\nTipo : %s\nEdad : %ld\nRaza : %s\nEstatura : %ld\nPeso : %.12lf\nSexo : %s\n", mascota->nombre, mascota->tipo, mascota->edad, mascota->raza, mascota->estatura, mascota->peso, sexo);
+		r = 0;
+		while(r < buffersize){
+			r += fwrite(&buffer[r], sizeof(char), buffersize, archivo);
+		}
 	}
 	fclose(archivo);
+	// existe
+	
 	printf("Quiere abrir la historia clinica de %s? [S/N]\n", mascota->nombre);
 	l = 0;
 	while(l != 'S' && l != 's' && l != 'N' && l != 'n'){ // [S/N]
@@ -242,21 +283,15 @@ void ver(){
 		if(pid == -1){
 			perror("can't fork");
 		}
-		if(pid == 0){
-			char command1[] = "/usr/bin/xdg-open";
-			if (r < 0){
-				perror("sprintf");
-				free(mascota);
-				exit(EXIT_FAILURE);
-			}
-			char env1[32], env2[32];
+		if(pid == 0){ // hijo
+			char env1[32], env2[32], env3[32], env4[64];
 			
 			char
 				/*
 				 *caml    = getenv("CAML_LD_LIBRARY_PATH"),
 				 *dbus    = getenv("DBUS_SESSION_BUS_ADDRESS"),
 				 */
-				*display = getenv("DISPLAY"), // para Window Manager
+				*display = getenv("DISPLAY"), // para X11
 				/*
 				 *editor  = getenv("EDITOR"),
 				 *home    = getenv("HOME"),
@@ -272,17 +307,21 @@ void ver(){
 				 *opam    = getenv("OPAM_SWITCH_PREFIX "),
 				 *path    = getenv("PATH"),
 				 *prompt  = getenv("PROMPT"),
-				 *pwd     = getenv("PWD"),
+				 */
+				*pwd     = getenv("PWD"),
+				/*
 				 *shell   = getenv("SHELL"),
 				 *shlvl   = getenv("SHLVL"),
 				 */
-				*term    = getenv("TERM"); // para consola
+				*term    = getenv("TERM"), // para consola
 			  /*
 			   *tmux0   = getenv("TMUX"),
 			   *tmux1   = getenv("TMUX_PANE"),
 			   *user    = getenv("USER"),
 			   *winid   = getenv("WINDOWID"),
-			   *xauth   = getenv("XAUTHORITY"),
+			   */
+				*xauth   = getenv("XAUTHORITY"); // para X11
+				/*
 			   *xdg0    = getenv("XDG_RUNTIME_DIR"),
 			   *xdg1    = getenv("XDG_SEAT"),
 			   *xdg2    = getenv("XDG_SESSION_CLASS"),
@@ -293,12 +332,27 @@ void ver(){
 			   */
 			
 			sprintf(env1, "TERM=%s", term);
-			sprintf(env2, "DISPLAY=%s", display);
-			
-			char* argv[3], *envp[] = {env1, env2, 0};
+			sprintf(env2, "PWD=%s", pwd);
+			sprintf(env3, "DISPLAY=%s", display);
+			sprintf(env4, "XAUTHORITY=%s", xauth); // !!! > 32
+			char* argv[3], *envp[] = {env1, env2, env3, env4, 0};
 			argv[0] = command1; argv[1] = command2; argv[2] = 0;
+			/*
+			printf("execve(\"%s\", {", command1);
+			for(uint i = 0; argv[i] != 0; i++){
+				printf("\"%s\",", argv[i]);
+			}
+			printf("}, {");
+			for(uint i = 0; envp[i] != 0; i++){
+				printf("\"%s\",", envp[i]);
+			}
+			printf("});\n");
+			*/
 			execve(command1, argv, envp); // xdg-open archivo.txt
 			exit(EXIT_SUCCESS);
+		} else { //padre
+			while(wait(&wstatus) != pid);
+			printf("padre se va a dormir\n");
 		}
 	}
 	free(mascota);
@@ -411,6 +465,7 @@ datos1 -> datos2
 free datos1
  */
 void sizemasmas(){
+	printf("Principio :\nid = %d, nombres = %d\n", hash_table.id, hash_table.nombres);
 	uint i;
 	tabla tmp;
 	tmp.size = hash_table.size;
@@ -418,16 +473,17 @@ void sizemasmas(){
 	tmp.nombres = hash_table.nombres;
 	
 	hash_table.size += 100;
+	printf("prev size : %lu\nnew  size : %lu\n", tmp.size, hash_table.size);
 	hash_table.id = (ulong*) calloc(hash_table.size, sizeof(ulong));
 	//error
 	hash_table.nombres = (char**) calloc(hash_table.size, sizeof(char*));
 	//error
+	
 	for(i = 0; i < tmp.size; i++){
 		hash_table.id[i] = tmp.id[i];
 		hash_table.nombres[i] = tmp.nombres[i];
 		printf("%s\n", hash_table.nombres[i]);
 	}
-	free(tmp.id);
-	printf("free 1\n");
-	//free(tmp.nombres);
+	printf("Medio :\nprev-id = %d, prev-nombres = %d\nnew -id = %d, new -nombres = %d\n", tmp.id, tmp.nombres, hash_table.id, hash_table.nombres);
+	free(tmp.id); free(tmp.nombres);
 }
