@@ -1,9 +1,19 @@
-typedef unsigned int uint;
-typedef unsigned long ulong; // 32 bits 
+#include <stdlib.h>
+#include <stdio.h>
+#include <strings.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #define ARCHIVO "dataDogs.dat"
 #define SIZE_LINEA 1024
 #define SIZE_GRANDE 32
 #define SIZE_PEQUENO 16
+#define TEXT_EDITOR "/usr/bin/emacs"
+#define FIRST_SIZE 11
+
+typedef unsigned int uint;
+typedef unsigned long ulong; // 32 bits 
 
 typedef struct dogType_s{
 	char nombre[32];

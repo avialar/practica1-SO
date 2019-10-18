@@ -1,10 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <strings.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-
 #include "p1-dogProgram.h"
 
 tabla hash_table;
@@ -14,9 +7,9 @@ int main(int argc, char* argv[]){
 	ulong key = 0, s = 1, zero=0;
 	FILE *archivo;
 	
-	hash_table.id = (ulong*) calloc(10000000, sizeof(ulong));
-	hash_table.nombres = (char**) calloc(10000000, sizeof(char*));
-	hash_table.size = 10000000;
+	hash_table.id = (ulong*) calloc(FIRST_SIZE, sizeof(ulong));
+	hash_table.nombres = (char**) calloc(FIRST_SIZE, sizeof(char*));
+	hash_table.size = FIRST_SIZE;
 	hash_table.numero_de_datos = 0;
 	hash_table.last_key = 0;
 	
@@ -29,9 +22,8 @@ int main(int argc, char* argv[]){
 	} else { // file exists
 		s = fread(&key, sizeof(ulong), 1, archivo);
 		for(uint i = 0; s != 0; i++){ // reading the file
-			if(i > hash_table.size){
+			if(i >= hash_table.size){
 				sizemasmas();
-				getchar();
 			}
 			hash_table.id[i] = key;
 			
@@ -184,10 +176,10 @@ void ver(){
 	ulong key, id, key2;
 	dogType *mascota;
 	FILE *archivo;
-	char l;
 	pid_t pid;
-	char command1[] = "/usr/bin/nedit", command2[46] = "";
-	char buffer[211] = ""; // 32 + 32 + 20 + 16 + (20 + 13 = 33) + 8 (malo/femenino) + (22 + 5*7 = 22 + 35 = 57)
+	char l, command1[] = TEXT_EDITOR,
+		command2[46] = "",
+		buffer[211] = ""; // 32 + 32 + 20 + 16 + (20 + 13 = 33) + 8 (malo/femenino) + (22 + 5*7 = 22 + 35 = 57)
 	/*
 	  Nombre : 10
 	  Tipo : 7
@@ -308,7 +300,7 @@ void ver(){
 				 *path    = getenv("PATH"),
 				 *prompt  = getenv("PROMPT"),
 				 */
-				*pwd     = getenv("PWD"),
+				//*pwd     = getenv("PWD"), // para abrir 
 				/*
 				 *shell   = getenv("SHELL"),
 				 *shlvl   = getenv("SHLVL"),
@@ -332,27 +324,15 @@ void ver(){
 			   */
 			
 			sprintf(env1, "TERM=%s", term);
-			sprintf(env2, "PWD=%s", pwd);
+			//sprintf(env2, "PWD=%s", pwd);
 			sprintf(env3, "DISPLAY=%s", display);
 			sprintf(env4, "XAUTHORITY=%s", xauth); // !!! > 32
 			char* argv[3], *envp[] = {env1, env2, env3, env4, 0};
 			argv[0] = command1; argv[1] = command2; argv[2] = 0;
-			/*
-			printf("execve(\"%s\", {", command1);
-			for(uint i = 0; argv[i] != 0; i++){
-				printf("\"%s\",", argv[i]);
-			}
-			printf("}, {");
-			for(uint i = 0; envp[i] != 0; i++){
-				printf("\"%s\",", envp[i]);
-			}
-			printf("});\n");
-			*/
 			execve(command1, argv, envp); // xdg-open archivo.txt
 			exit(EXIT_SUCCESS);
 		} else { //padre
 			while(wait(&wstatus) != pid);
-			printf("padre se va a dormir\n");
 		}
 	}
 	free(mascota);
@@ -465,25 +445,27 @@ datos1 -> datos2
 free datos1
  */
 void sizemasmas(){
-	printf("Principio :\nid = %d, nombres = %d\n", hash_table.id, hash_table.nombres);
 	uint i;
 	tabla tmp;
 	tmp.size = hash_table.size;
 	tmp.id = hash_table.id;
 	tmp.nombres = hash_table.nombres;
 	
-	hash_table.size += 100;
-	printf("prev size : %lu\nnew  size : %lu\n", tmp.size, hash_table.size);
+	hash_table.size += 10000000;
+	//printf("prev size : %lu\nnew  size : %lu\n", tmp.size, hash_table.size);
 	hash_table.id = (ulong*) calloc(hash_table.size, sizeof(ulong));
 	//error
 	hash_table.nombres = (char**) calloc(hash_table.size, sizeof(char*));
 	//error
-	
+	//printf("prev-id = %u, prev-nombres = %u\n new-id = %u,  new-nombres = %u\n", tmp.id, tmp.nombres, hash_table.id, hash_table.nombres);
 	for(i = 0; i < tmp.size; i++){
 		hash_table.id[i] = tmp.id[i];
-		hash_table.nombres[i] = tmp.nombres[i];
-		printf("%s\n", hash_table.nombres[i]);
+		if(tmp.id[i] != 0){
+			hash_table.nombres[i] = tmp.nombres[i];
+			//printf("%lu - %s\n", hash_table.id[i], hash_table.nombres[i]);
+		} else {
+			//printf("%lu - NULL\n", hash_table.id[i]);
+		}
 	}
-	printf("Medio :\nprev-id = %d, prev-nombres = %d\nnew -id = %d, new -nombres = %d\n", tmp.id, tmp.nombres, hash_table.id, hash_table.nombres);
 	free(tmp.id); free(tmp.nombres);
 }

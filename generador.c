@@ -41,8 +41,8 @@ int main(){
 
 	
 	for(i = 0; i < ESTRUCTURAS; i++, rewind(nombre_a)){
-		if(i % (ESTRUCTURAS / 10) == 0){
-			printf("%ld%%\n", (ulong) (i * 1.0 / ESTRUCTURAS * 100));
+		if((i + 1) % (ESTRUCTURAS / 10) == 0){
+			printf("%ld%%\n", (ulong) ((i + 1.0) / ESTRUCTURAS * 100.0));
 		}
 		n = rand() % NOMBRES;
 		for(j = 0; nombres[n][j] != 0; j++){
