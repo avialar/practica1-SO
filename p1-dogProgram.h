@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 
 #define ARCHIVO "dataDogs.dat"
+#define PRIMOS "primos.dat"
 #define SIZE_LINEA 1024
 #define SIZE_GRANDE 32
 #define SIZE_PEQUENO 16
@@ -32,6 +33,12 @@ typedef struct tabla_s{
 	ulong numero_de_datos;
 	ulong last_key;
 } tabla;
+
+typedef struct primos_s{
+	ulong* primos;
+	ulong cur;
+	ulong size;
+} sprimos;
 
 void menu();
 void ingresar();

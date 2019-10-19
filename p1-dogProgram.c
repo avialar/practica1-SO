@@ -1,15 +1,47 @@
 #include "p1-dogProgram.h"
 
 tabla hash_table;
+sprimos primos;
 
 int main(int argc, char* argv[]){
+	int r;
+	uint i;
 	dogType buffer;
-	ulong key = 0, s = 1, zero=0;
+	ulong key = 0, s = 1, n;
 	FILE *archivo;
+
+	archivo = fopen(PRIMOS, "r");
+	if(archivo == NULL){
+		fprintf(stderr, "Error : No se puede leer %s\n", PRIMOS);
+		return(EXIT_FAILURE);
+	}
+
+	// contar cuantos numeros hay
 	
-	hash_table.id = (ulong*) calloc(FIRST_SIZE, sizeof(ulong));
-	hash_table.nombres = (char**) calloc(FIRST_SIZE, sizeof(char*));
-	hash_table.size = FIRST_SIZE;
+	r = fseek(archivo, 0, SEEK_END);
+	if(r == -1){
+		perror("fseek");
+		return(EXIT_FAILURE);
+	}
+
+	primos.size = ftell(archivo) / sizeof(ulong);
+
+	// leer los primos
+	
+	r = fseek(archivo, 0, SEEK_SET);
+	//error
+
+	primos.primos = (ulong *) malloc(sizeof(ulong) * primos.size);
+
+	for(i = 0; i < primos.size; i++){
+		r = fread(primos.primos+i, sizeof(ulong), 1, archivo);
+	}
+	
+	fclose(archivo);
+
+	
+	// hash table
+
 	hash_table.numero_de_datos = 0;
 	hash_table.last_key = 0;
 	
@@ -17,11 +49,40 @@ int main(int argc, char* argv[]){
 	if(archivo == 0){ // file doesn't exist
 		printf("el archivo ya no existe\n");
 		archivo = fopen(ARCHIVO, "w");
-		fwrite(&zero, sizeof(ulong), 1, archivo);
 		fclose(archivo);
+
+		for(i=0; primos.primos[i] < FIRST_SIZE; i++);
+		primos.cur = i;
+		hash_table.id = (ulong*) calloc(primos.primos[primos.cur], sizeof(ulong));
+		hash_table.nombres = (char**) calloc(primos.primos[primos.cur], sizeof(char*));
+		hash_table.size = primos.primos[primos.cur];
 	} else { // file exists
+		// contar cuantos datos hay
+		r = fseek(archivo, 0, SEEK_END);
+		if(r == -1){
+			perror("fseek");
+			return(EXIT_FAILURE);
+		}
+
+		n = ftell(archivo) / (sizeof(ulong) + sizeof(dogType));
+		for(i=0; i < primos.size && primos.primos[i] < n; i++);
+		if(i == primos.size){
+			fprintf(stderr, "Error : hay %lu datos pero el primo maximo que tenemos es %lu\n", n, primos.primos[i-1]);
+			return(EXIT_FAILURE);
+		}
+		primos.cur = i;
+		
+		hash_table.id = (ulong*) calloc(primos.primos[primos.cur], sizeof(ulong));
+		hash_table.nombres = (char**) calloc(primos.primos[primos.cur], sizeof(char*));
+		hash_table.size = primos.primos[primos.cur];
+
+		r = fseek(archivo, 0, SEEK_SET);
+		//error
+		
+		// ingresar datos
+		
 		s = fread(&key, sizeof(ulong), 1, archivo);
-		for(uint i = 0; s != 0; i++){ // reading the file
+		for(i = 0; s != 0; i++){ // reading the file
 			if(i >= hash_table.size){
 				sizemasmas();
 			}
@@ -426,11 +487,11 @@ ulong new_hash(char* nombre){
 
 void ir_en_linea(FILE* archivo, ulong linea){
 	ulong i = 0;
-	int r;
+	int r = 1;
 	ulong tmp;
 	dogType buffer;
-	while (i < linea){
-		r += fread(&tmp, sizeof(ulong), 1, archivo);
+	while (r != 0 && i < linea){
+		r = fread(&tmp, sizeof(ulong), 1, archivo);
 		r = fread(&buffer, sizeof(dogType), 1, archivo);
 		i++;
 	}
@@ -450,9 +511,13 @@ void sizemasmas(){
 	tmp.size = hash_table.size;
 	tmp.id = hash_table.id;
 	tmp.nombres = hash_table.nombres;
+
+	primos.cur++;
 	
-	hash_table.size += 10000000;
-	//printf("prev size : %lu\nnew  size : %lu\n", tmp.size, hash_table.size);
+	hash_table.size = primos.primos[primos.cur];
+	if(primos.cur % ( primos.size / 100) == 0){
+		printf("%lu%% prev size : %lu\nnew  size : %lu\n", (ulong) (primos.cur * 1.0 / primos.size * 100), tmp.size, hash_table.size);
+	}
 	hash_table.id = (ulong*) calloc(hash_table.size, sizeof(ulong));
 	//error
 	hash_table.nombres = (char**) calloc(hash_table.size, sizeof(char*));
