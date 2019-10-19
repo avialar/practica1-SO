@@ -21,6 +21,6 @@ primos.generador.o: primos.generador.c
 	$(CC) -c $< $(CFLAGS)
 
 clean:
-	rm p1-dogProgram datos.generador primos.generador *.o *.dat historias_clinicas/*
+	rm -r p1-dogProgram datos.generador primos.generador *.o *.dat historias_clinicas
 
 .PHONY : clean p1-dogProgram

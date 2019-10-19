@@ -259,7 +259,7 @@ void ver(){
 		exit(EXIT_FAILURE);
 	}
 	id = hash(key);
-	if(hash_table.id[id] == 0){
+	if(id == 0 || hash_table.id[id] == 0){
 		return;
 	}
 	mascota = (dogType*) malloc(sizeof(dogType));
@@ -301,8 +301,12 @@ void ver(){
 		
 		archivo = fopen(command2, "w");
 		if(archivo == NULL){
-			perror("fopen");
-			exit(EXIT_FAILURE);
+			r = mkdir("historias_clinicas", 0755);
+			if(r == -1){
+				perror("mkdir");
+				exit(EXIT_FAILURE);
+			}
+			archivo = fopen(command2, "w");
 		}
 		char malo[] = "malo", femenino[] = "femenino", otro[] = "otro", *sexo;
 		if(mascota->sexo == 'm'){
@@ -417,6 +421,7 @@ void borrar(){
 	ir_en_linea(archivo, id);
 	hash_table.id[id] = 0;
 	free(hash_table.nombres[id]);
+	hash_table.numero_de_datos--;
 	key = 0;
 	r = fwrite(&key, sizeof(ulong), 1, archivo);
 	if (r == 0){
@@ -455,9 +460,12 @@ void salir(){
 
 // returns id ; hash_table[id] == key dice si existe
 ulong hash(ulong key){
+	if(key == 0){
+		return 0;
+	}
 	ulong id = key % hash_table.size, id1 = id;
 	while (hash_table.id[id] != key){
-		id = (id+1) % hash_table.size;
+		id = (id+key) % hash_table.size;
 		if (id == id1){ // no hay el id en la tabla
 			return 0;
 		}

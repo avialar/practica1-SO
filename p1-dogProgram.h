@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h> // para mkdir
 
 #define ARCHIVO "dataDogs.dat"
 #define PRIMOS "primos.dat"
