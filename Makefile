@@ -1,12 +1,14 @@
 CC = gcc
 CFLAGS = -g -Wall
+LIBS = #-lncurses
+
 all: p1-dogProgram datos.generador primos.generador
 
 p1-dogProgram: p1-dogProgram.o
-	$(CC) -o $@ $<
+	$(CC) -o $@ $< $(LIBS)
 
 datos.generador: datos.generador.o
-	$(CC) -o $@ $<
+	$(CC) -o $@ $< $(LIBS)
 
 primos.generador: primos.generador.o
 	$(CC) -o $@ $<

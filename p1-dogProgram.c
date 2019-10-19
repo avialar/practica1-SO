@@ -1,7 +1,8 @@
 #include "p1-dogProgram.h"
 
-tabla hash_table;
-sprimos primos;
+tabla hash_table; // 76MB
+sprimos primos; // 5MB
+struct winsize window;
 
 int main(int argc, char* argv[]){
 	int r;
@@ -10,26 +11,24 @@ int main(int argc, char* argv[]){
 	ulong key = 0, s = 1, n;
 	FILE *archivo;
 
+	setbuf(stdout, NULL);
+
+	ioctl(STDOUT_FILENO, TIOCGWINSZ, &window);
+	
 	archivo = fopen(PRIMOS, "r");
-	if(archivo == NULL){
-		fprintf(stderr, "Error : No se puede leer %s\n", PRIMOS);
-		return(EXIT_FAILURE);
-	}
+	ERROR(archivo == NULL, fprintf(stderr, "Error : No se puede leer %s\n", PRIMOS))
 
 	// contar cuantos numeros hay
 	
 	r = fseek(archivo, 0, SEEK_END);
-	if(r == -1){
-		perror("fseek");
-		return(EXIT_FAILURE);
-	}
+	ERROR(r == -1, perror("fseek"));
 
 	primos.size = ftell(archivo) / sizeof(ulong);
 
 	// leer los primos
 	
 	r = fseek(archivo, 0, SEEK_SET);
-	//error
+	ERROR(r == -1, perror("fseek"));
 
 	primos.primos = (ulong *) malloc(sizeof(ulong) * primos.size);
 
@@ -54,7 +53,6 @@ int main(int argc, char* argv[]){
 		for(i=0; primos.primos[i] < FIRST_SIZE; i++);
 		primos.cur = i;
 		hash_table.id = (ulong*) calloc(primos.primos[primos.cur], sizeof(ulong));
-		hash_table.nombres = (char**) calloc(primos.primos[primos.cur], sizeof(char*));
 		hash_table.size = primos.primos[primos.cur];
 	} else { // file exists
 		// contar cuantos datos hay
@@ -66,44 +64,30 @@ int main(int argc, char* argv[]){
 
 		n = ftell(archivo) / (sizeof(ulong) + sizeof(dogType));
 		for(i=0; i < primos.size && primos.primos[i] < n; i++);
-		if(i == primos.size){
-			fprintf(stderr, "Error : hay %lu datos pero el primo maximo que tenemos es %lu\n", n, primos.primos[i-1]);
-			return(EXIT_FAILURE);
-		}
+		ERROR(i == primos.size, fprintf(stderr, "Error : hay %lu datos pero el primo maximo que tenemos es %lu\n", n, primos.primos[i-1]));
+
 		primos.cur = i;
 		
 		hash_table.id = (ulong*) calloc(primos.primos[primos.cur], sizeof(ulong));
-		hash_table.nombres = (char**) calloc(primos.primos[primos.cur], sizeof(char*));
 		hash_table.size = primos.primos[primos.cur];
 
 		r = fseek(archivo, 0, SEEK_SET);
-		//error
+		ERROR(r == -1, perror("fseek"));
 		
 		// ingresar datos
+		printf("Ingresar datos\n");
 		
 		s = fread(&key, sizeof(ulong), 1, archivo);
 		for(i = 0; s != 0; i++){ // reading the file
-			if(i >= hash_table.size){
-				sizemasmas();
-			}
+			PROGRESSION((i+1), n, (window.ws_col - 8), 100);
 			hash_table.id[i] = key;
-			
-			if(hash_table.id[i] != 0){ // hay un dato
+			if(key != 0){
 				hash_table.numero_de_datos++;
-				if (key > hash_table.last_key){
-					hash_table.last_key = key;
-				}
-				s = fread(&buffer, sizeof(dogType), 1, archivo); // nombre de la mascota
-				hash_table.nombres[i] = (char*) malloc(32 * sizeof(char));
-				for(uint j = 0; j < SIZE_GRANDE; j++){ // copy string
-					hash_table.nombres[i][j] = buffer.nombre[j];
-				}
-			} else {
-				s = fread(&buffer, sizeof(dogType), 1, archivo);
 			}
+			s = fread(&buffer, sizeof(dogType), 1, archivo);
 			s = fread(&key, sizeof(ulong), 1, archivo);
 		}
-		
+		printf("\n");
 		fclose(archivo);
 	}
 
@@ -112,12 +96,23 @@ int main(int argc, char* argv[]){
 }
 
 void menu(){
-	char p;
+	char p, buf[BUFSIZ];
+	struct termios termios_p_raw, termios_p_def;
+	tcgetattr(STDIN_FILENO, &termios_p_def);
+	tcgetattr(STDIN_FILENO, &termios_p_raw);
+	termios_p_raw.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
+	                        | INLCR | IGNCR | ICRNL | IXON);
+	termios_p_raw.c_oflag &= ~OPOST;
+	termios_p_raw.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	termios_p_raw.c_cflag &= ~(CSIZE | PARENB);
+	termios_p_raw.c_cflag |= CS8;
+	
 	while (1) {
 		p = 0;
 		printf("1. Ingresar registro\n2. Ver registro\n3. Borrar registro\n4. Buscar\n5. Salir\n");
 		while(p < '1' || p > '5'){
-			p = getchar();
+			p = getc(stdin);
+			//p = '5';
 		}
 		switch(p){ // check si p es 1, 2, 3, 4 o 5
 		case '1':
@@ -130,16 +125,21 @@ void menu(){
 			borrar();
 			break;
 		case '4':
-			buscar();
+			buscar(termios_p_raw, termios_p_def, buf);
 			break;
 		case '5':
-			salir();
+			salir(EXIT_SUCCESS);
 			break;
 		default:
-			perror("getchar");
-			exit(EXIT_FAILURE);
+			ERROR(1, perror("getc"));
 		}
-		printf("Presione Enter.\n"); getchar(); getchar(); 
+		printf("Cualquier tecla.\n");
+		fflush(stdin);
+		tcsetattr(STDIN_FILENO, TCSANOW, &termios_p_raw);
+		setbuf(stdin, NULL);		
+		getc(stdin);
+		setbuf(stdin, buf);
+		tcsetattr(STDIN_FILENO, TCSANOW, &termios_p_def);
 	}
 }
 
@@ -150,82 +150,43 @@ void ingresar(){
 	FILE *archivo;
 	printf("Cual es el nombre de la mascota?\n");
 	r = scanf("%s", new->nombre);
-	if (r == 0){
-		perror("scanf");
-		free(new);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("scanf"); free(new));
 	printf("Cual es su tipo?\n");
 	r = scanf("%s", new->tipo);
-	if (r == 0){
-		perror("scanf");
-		free(new);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("scanf"); free(new));
 	printf("Cual es su edad?\n");
 	r = scanf("%lu", &new->edad);
-	if (r == 0){
-		perror("scanf");
-		free(new);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("scanf"); free(new));
 	printf("Cual es su raza?\n");
 	r = scanf("%s", new->raza);
-	if (r == 0){
-		perror("scanf");
-		free(new);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("scanf"); free(new));
 	printf("Cual es su estatura (en cm)?\n");
 	r = scanf("%lu", &new->estatura);
-	if (r == 0){
-		perror("scanf");
-		free(new);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("scanf"); free(new));
 	printf("Cual es su peso (en Kg)?\n");
 	r = scanf("%lf", &new->peso);
-	if (r == 0){
-		perror("scanf");
-		free(new);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("scanf"); free(new));
 	printf("Cual es su sexo?\n");
 	getchar();
 	r = scanf("%c", &new->sexo);
-	if (r == 0){
-		perror("scanf");
-		free(new);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("scanf"); free(new));
 
 	key = new_hash(new->nombre);
 	id = hash(key);
 	if(hash_table.id[id] == key){
 		printf("Key : %lu\n", key);
 	} else {
-		fprintf(stderr, "Error in new_hash\n");
-		free(new);
-		exit(EXIT_FAILURE);
+		ERROR(1, fprintf(stderr, "Error in new_hash\n"); free(new));
 	}
 	
 	/*
 	  Escribir en un archivo
 	 */
 	archivo = fopen(ARCHIVO, "r+");
-	if (archivo == 0){
-		perror("fopen");
-		free(new);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(archivo == 0, perror("fopen"); free(new));
 	ir_en_linea(archivo, id);
 	r = fwrite(&key, sizeof(ulong), 1, archivo);
-	if (r == 0){
-		perror("fwrite");
-		free(new);
-		fclose(archivo);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("fwrite"); free(new); fclose(archivo));
 	fwrite(new, sizeof(dogType), 1, archivo);
 	fclose(archivo);
 	
@@ -233,7 +194,7 @@ void ingresar(){
 }
 
 void ver(){
-	int r, buffersize, wstatus;
+	int r, buffersize;
 	ulong key, id, key2;
 	dogType *mascota;
 	FILE *archivo;
@@ -254,10 +215,7 @@ void ver(){
 	
 	printf("Hay %ld numeros presentes.\nCual es la clave de la mascota?\n", hash_table.numero_de_datos);
 	r = scanf("%ld", &key);
-	if (r == 0){
-		perror("scanf");
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("scanf"));
 	id = hash(key);
 	if(id == 0 || hash_table.id[id] == 0){
 		return;
@@ -266,34 +224,20 @@ void ver(){
 	archivo = fopen(ARCHIVO, "r");
 	ir_en_linea(archivo, id);
 	r = fread(&key2, sizeof(ulong), 1, archivo);
-	if (r == 0){
-		perror("fread");
-		free(mascota);
-		fclose(archivo);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("fread"); free(mascota); fclose(archivo));
 	if(key != key2){
 		printf("/!\\ key (%ld) != key2 (%ld)\n", key, key2);
 		return;
 	}
 	r = fread(mascota, sizeof(dogType), 1, archivo);
-	if (r == 0){
-		perror("fread");
-		free(mascota);
-		fclose(archivo);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("fread"); free(mascota); fclose(archivo));
 	fclose(archivo);
 	printf("Nombre : %s\nTipo : %s\nEdad : %ld\nRaza : %s\nEstatura : %ld\nPeso : %.12lf\nSexo : %c\n", mascota->nombre, mascota->tipo, mascota->edad, mascota->raza, mascota->estatura, mascota->peso, mascota->sexo);
 
 	//existe la historia clinica?
 	
 	r = sprintf(command2, "historias_clinicas/%lu_hc.txt", key); // 19 + 20 + 7
-	if (r < 0){
-		perror("sprintf");
-		free(mascota);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r < 0, perror("sprintf"); free(mascota));
 	
 	archivo = fopen(command2, "r");
 
@@ -302,10 +246,7 @@ void ver(){
 		archivo = fopen(command2, "w");
 		if(archivo == NULL){
 			r = mkdir("historias_clinicas", 0755);
-			if(r == -1){
-				perror("mkdir");
-				exit(EXIT_FAILURE);
-			}
+			ERROR(r == -1, perror("mkdir"));
 			archivo = fopen(command2, "w");
 		}
 		char malo[] = "malo", femenino[] = "femenino", otro[] = "otro", *sexo;
@@ -329,17 +270,11 @@ void ver(){
 	l = 0;
 	while(l != 'S' && l != 's' && l != 'N' && l != 'n'){ // [S/N]
 		r = scanf("%c", &l);
-		if (r == 0){
-			perror("scanf");
-			free(mascota);
-			exit(EXIT_FAILURE);
-		}
+		ERROR(r == 0, perror("scanf"); free(mascota));
 	}
 	if(l == 'S' || l == 's'){ // abrir historia clinica
 		pid = fork();
-		if(pid == -1){
-			perror("can't fork");
-		}
+		ERROR(pid == -1, perror("can't fork"));
 		if(pid == 0){ // hijo
 			char env1[32], env2[32], env3[32], env4[64];
 			
@@ -395,9 +330,7 @@ void ver(){
 			char* argv[3], *envp[] = {env1, env2, env3, env4, 0};
 			argv[0] = command1; argv[1] = command2; argv[2] = 0;
 			execve(command1, argv, envp); // xdg-open archivo.txt
-			exit(EXIT_SUCCESS);
-		} else { //padre
-			while(wait(&wstatus) != pid);
+			salir(EXIT_SUCCESS);
 		}
 	}
 	free(mascota);
@@ -409,10 +342,7 @@ void borrar(){
 	FILE *archivo;
 	printf("Hay %ld numeros presentes.\nCual es la clave de la mascota?\n", hash_table.numero_de_datos);
 	r = scanf("%ld", &key);
-	if (r == 0){
-		perror("scanf");
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("scanf"));
 	id = hash(key);
 	if(hash_table.id[id] == 0){
 		return;
@@ -420,41 +350,72 @@ void borrar(){
 	archivo = fopen(ARCHIVO, "r+");
 	ir_en_linea(archivo, id);
 	hash_table.id[id] = 0;
-	free(hash_table.nombres[id]);
 	hash_table.numero_de_datos--;
 	key = 0;
 	r = fwrite(&key, sizeof(ulong), 1, archivo);
-	if (r == 0){
-		perror("fwrite");
-		fclose(archivo);
-		exit(EXIT_FAILURE);
-	}
+	ERROR(r == 0, perror("fwrite"); fclose(archivo));
 	fclose(archivo);
 }
 
-void buscar(){
+void buscar(struct termios termios_p_raw, struct termios termios_p_def, char buf[]){
 	int r;
-	ulong i, j;
-	char buffer[SIZE_GRANDE];
+	ulong i, j, k = 0, lineas;
+	char buffer_u[SIZE_GRANDE], buffer_d[SIZE_GRANDE];
+	FILE *archivo;
 	printf("Cual es el nombre de la mascota?\n");
-	r = scanf("%s", buffer);
-	if (r == 0){
-		perror("scanf");
-		exit(EXIT_FAILURE);
+	r = scanf("%s", buffer_u);
+	ERROR(r == 0, perror("scanf"));
+	for(i = 0; i < SIZE_GRANDE; i++){
+		if(buffer_u[i] >= 'A' && buffer_u[i] <= 'Z'){
+			buffer_u[i] += 32;
+		}
 	}
+	archivo = fopen(ARCHIVO, "r");
+	ERROR(archivo == NULL, perror("fopen"));
+	
+	fflush(stdin);
+	tcsetattr(STDIN_FILENO, TCSANOW, &termios_p_raw); // set term to raw
+	setbuf(stdin, NULL);
+	lineas = (window.ws_row - 1); // leer las lineas del term
+
 	for (i = 0; i < hash_table.size; i++){
 		if(hash_table.id[i] != 0){
-			for(j = 0; j < SIZE_GRANDE && buffer[j] != 0 && hash_table.nombres[i][j] != 0 && buffer[j] == hash_table.nombres[i][j]; j++){
+			fseek(archivo, sizeof(ulong), SEEK_CUR);
+			r = fread(buffer_d, sizeof(char), SIZE_GRANDE, archivo);
+			fseek(archivo, sizeof(dogType) - 32 * sizeof(char), SEEK_CUR);
+			for(j = 0; j < SIZE_GRANDE; j++){
+				if(buffer_d[j] >= 'A' && buffer_d[j] <= 'Z'){
+					buffer_d[j] += ('a' - 'A');
+				}
 			}
-			if(buffer[j] == '\0'){
-				printf("key : %ld - nombre : %s\n", hash_table.id[i], hash_table.nombres[i]);
+			for(j = 0; j < SIZE_GRANDE && buffer_u[j] != 0 && buffer_d[j] != 0 && buffer_u[j] == buffer_d[j]; j++){
+			}
+			if(buffer_u[j] == '\0'){
+				printf("key : %ld - nombre : %s\n\r", hash_table.id[i], buffer_d);
+				k++;
+				if(k == lineas){
+					printf("Continuar - cualquier tecla ; Salir - q");
+					r = getc(stdin);
+					printf("\n\r");
+					if(r == 'q'){
+						setbuf(stdin, buf); // set buffer
+						tcsetattr(STDIN_FILENO, TCSANOW, &termios_p_def); // set back term to default
+						fclose(archivo);
+						return;
+					}
+					k = 0;
+				}
 			}
 		}
 	}
+	setbuf(stdin, buf);
+	tcsetattr(STDIN_FILENO, TCSANOW, &termios_p_def);
+	fclose(archivo);
 }
 
-void salir(){
-	exit(EXIT_SUCCESS);
+void salir(int exitcode){
+	free(hash_table.id); free(primos.primos);
+	exit(exitcode);
 }
 
 
@@ -486,10 +447,6 @@ ulong new_hash(char* nombre){
 	}
 	
 	hash_table.id[id] = key;
-	hash_table.nombres[id] = (char*) malloc(SIZE_GRANDE * sizeof(char));
-	for(uint j = 0; j < SIZE_GRANDE; j++){ // copy string
-		hash_table.nombres[id][j] = nombre[j];
-	}
 	return key;
 }
 
@@ -518,27 +475,14 @@ void sizemasmas(){
 	tabla tmp;
 	tmp.size = hash_table.size;
 	tmp.id = hash_table.id;
-	tmp.nombres = hash_table.nombres;
 
 	primos.cur++;
 	
 	hash_table.size = primos.primos[primos.cur];
-	if(primos.cur % ( primos.size / 100) == 0){
-		printf("%lu%% prev size : %lu\nnew  size : %lu\n", (ulong) (primos.cur * 1.0 / primos.size * 100), tmp.size, hash_table.size);
-	}
 	hash_table.id = (ulong*) calloc(hash_table.size, sizeof(ulong));
-	//error
-	hash_table.nombres = (char**) calloc(hash_table.size, sizeof(char*));
-	//error
-	//printf("prev-id = %u, prev-nombres = %u\n new-id = %u,  new-nombres = %u\n", tmp.id, tmp.nombres, hash_table.id, hash_table.nombres);
+	ERROR(hash_table.id == NULL, perror("calloc"); free(tmp.id));
 	for(i = 0; i < tmp.size; i++){
 		hash_table.id[i] = tmp.id[i];
-		if(tmp.id[i] != 0){
-			hash_table.nombres[i] = tmp.nombres[i];
-			//printf("%lu - %s\n", hash_table.id[i], hash_table.nombres[i]);
-		} else {
-			//printf("%lu - NULL\n", hash_table.id[i]);
-		}
 	}
-	free(tmp.id); free(tmp.nombres);
+	free(tmp.id);
 }
