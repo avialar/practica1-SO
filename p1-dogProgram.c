@@ -4,6 +4,14 @@ tabla hash_table;  // 76MB
 sprimos primos;    // 5MB
 struct winsize window;
 
+void test_hash(){
+	printf("size = %lu\nnumero de datos = %lu\nlast key = %lu\nid = {", hash_table.size, hash_table.numero_de_datos, hash_table.last_key);
+	for(ulong i = 0; i < hash_table.size; i++){
+		printf("%lu - %lu ; ", i, hash_table.id[i]);
+	}
+	printf("}\n");
+}
+
 int main(int argc, char* argv[]) {
   int r;
   uint i;
@@ -85,10 +93,15 @@ int main(int argc, char* argv[]) {
 
     s = fread(&key, sizeof(ulong), 1, archivo);
     for (i = 0; s != 0; i++) {  // reading the file
-      PROGRESSION((i + 1), n, (window.ws_col - 8), 100);
+	    if(n > 100) {
+		    PROGRESSION((i + 1), n, (window.ws_col - 8), 100);
+	    }
       hash_table.id[i] = key;
       if (key != 0) {
         hash_table.numero_de_datos++;
+      }
+      if(key > hash_table.last_key){
+	      hash_table.last_key = key;
       }
       s = fread(&buffer, sizeof(dogType), 1, archivo);
       s = fread(&key, sizeof(ulong), 1, archivo);
@@ -96,6 +109,7 @@ int main(int argc, char* argv[]) {
     printf("\n");
     fclose(archivo);
   }
+  //test_hash();
 
   menu();
   return EXIT_SUCCESS;
@@ -225,7 +239,7 @@ void ver() {
   r = scanf("%ld", &key);
   ERROR(r == 0, perror("scanf"));
   id = hash(key);
-  if (id == 0 || hash_table.id[id] == 0) {
+  if (hash_table.id[id] != key) {
     return;
   }
   mascota = (dogType*)malloc(sizeof(dogType));
@@ -292,7 +306,7 @@ void ver() {
     pid = fork();
     ERROR(pid == -1, perror("can't fork"));
     if (pid == 0) {  // hijo
-      char env1[32], env2[32], env3[32], env4[64];
+      char env1[32], env2[32], env3[64];
 
       char
           /*
@@ -315,9 +329,7 @@ void ver() {
            *opam    = getenv("OPAM_SWITCH_PREFIX "),
            *path    = getenv("PATH"),
            *prompt  = getenv("PROMPT"),
-           */
-          //*pwd     = getenv("PWD"), // para abrir
-          /*
+           *pwd     = getenv("PWD"), // para abrir
            *shell   = getenv("SHELL"),
            *shlvl   = getenv("SHLVL"),
            */
@@ -340,10 +352,9 @@ void ver() {
                                                */
 
       sprintf(env1, "TERM=%s", term);
-      // sprintf(env2, "PWD=%s", pwd);
-      sprintf(env3, "DISPLAY=%s", display);
-      sprintf(env4, "XAUTHORITY=%s", xauth);  // !!! > 32
-      char *argv[3], *envp[] = {env1, env2, env3, env4, 0};
+      sprintf(env2, "DISPLAY=%s", display);
+      sprintf(env3, "XAUTHORITY=%s", xauth);  // !!! > 32
+      char *argv[3], *envp[] = {env1, env2, env3, 0};
       argv[0] = command1;
       argv[1] = command2;
       argv[2] = 0;
@@ -400,7 +411,7 @@ void buscar(struct termios termios_p_raw,
   lineas = (window.ws_row - 1);  // leer las lineas del term
 
   for (i = 0; i < hash_table.size; i++) {
-    if (hash_table.id[i] != 0) {
+	  if (hash_table.id[i] != 0) {
       fseek(archivo, sizeof(ulong), SEEK_CUR);
       r = fread(buffer_d, sizeof(char), SIZE_GRANDE, archivo);
       fseek(archivo, sizeof(dogType) - 32 * sizeof(char), SEEK_CUR);
@@ -445,9 +456,6 @@ void salir(int exitcode) {
 
 // returns id ; hash_table[id] == key dice si existe
 ulong hash(ulong key) {
-  if (key == 0) {
-    return 0;
-  }
   ulong id = key % hash_table.size, id1 = id;
   while (hash_table.id[id] != key) {
     id = (id + key) % hash_table.size;
@@ -464,10 +472,11 @@ ulong new_hash(char* nombre) {
   }
   hash_table.numero_de_datos++;
   hash_table.last_key++;
+  for(;hash_table.last_key % hash_table.size == 0;hash_table.last_key++);
   ulong key = hash_table.last_key;
   ulong id = key % hash_table.size;
   while (hash_table.id[id] != 0) {
-    id = (id + 1) % hash_table.size;
+    id = (id + key) % hash_table.size;
   }
 
   hash_table.id[id] = key;
@@ -482,7 +491,15 @@ void ir_en_linea(FILE* archivo, ulong linea) {
   while (r != 0 && i < linea) {
     r = fread(&tmp, sizeof(ulong), 1, archivo);
     r = fread(&buffer, sizeof(dogType), 1, archivo);
-    i++;
+    if(r > 0) {
+	    i++;
+    }
+  }
+  tmp=0;
+  while(i < linea){
+	  r = fwrite(&tmp, sizeof(ulong), 1, archivo);
+	  r = fwrite(&buffer, sizeof(dogType), 1, archivo);
+	  i++;
   }
 }
 

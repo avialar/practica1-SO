@@ -58,7 +58,9 @@ int main(int argc, char* argv[]) {
   }
 
   for (i = 1; i <= e; i++, rewind(nombre_a)) {
-    PROGRESSION(i, e, cols, 100);
+	  if(e > 100) {
+		  PROGRESSION(i, e, cols, 100);
+	  }
     n = rand() % NOMBRES;
     for (j = 0; nombres[n][j] != 0; j++) {
       tmp.nombre[j] = nombres[n][j];

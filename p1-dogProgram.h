@@ -13,7 +13,7 @@
 #define SIZE_LINEA 1024
 #define SIZE_GRANDE 32
 #define SIZE_PEQUENO 16
-#define TEXT_EDITOR "/usr/bin/emacs"
+#define TEXT_EDITOR "/usr/bin/nedit"
 #define FIRST_SIZE 11
 #define ERROR(test, funcion) \
   if (test) {                \
